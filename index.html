@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Умный дневник питания</title>
+
+    <!-- PWA: манифест и иконки -->
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+    <meta name="theme-color" content="#9370DB">
+
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+    <!-- ========================= -->
+    <!-- ЭКРАН РЕГИСТРАЦИИ / ПРОФИЛЯ -->
+    <!-- ========================= -->
+    <div id="profile-overlay" class="profile-overlay">
+        <div class="profile-card">
+            <h2 id="profile-title">Добро пожаловать!</h2>
+            <p class="hint" id="profile-subtitle">Заполните данные о себе — это нужно один раз. Потом сможете изменить.</p>
+
+            <label for="profile-name">Имя</label>
+            <input type="text" id="profile-name" class="field" placeholder="Как вас зовут?">
+
+            <label for="profile-age">Возраст (лет)</label>
+            <input type="number" id="profile-age" class="field" placeholder="Напр.: 35" min="1" max="120">
+
+            <label for="profile-height">Рост (см)</label>
+            <input type="number" id="profile-height" class="field" placeholder="Напр.: 170" min="50" max="250">
+
+            <label for="profile-weight">Вес (кг)</label>
+            <input type="number" id="profile-weight" class="field" placeholder="Напр.: 65" min="20" max="300" step="0.1" oninput="updateBMI()">
+
+            <!-- Блок ИМТ — появляется автоматически при вводе роста и веса -->
+            <div id="bmi-box" class="bmi-box hidden">
+                <div class="bmi-row">
+                    <span class="bmi-label">ИМТ</span>
+                    <span class="bmi-value" id="bmi-value">—</span>
+                </div>
+                <div class="bmi-category" id="bmi-category">—</div>
+                <div class="bmi-scale">
+                    <div class="bmi-scale-bar">
+                        <div class="bmi-scale-segment seg-low"></div>
+                        <div class="bmi-scale-segment seg-normal"></div>
+                        <div class="bmi-scale-segment seg-over"></div>
+                        <div class="bmi-scale-segment seg-obese"></div>
+                    </div>
+                    <div class="bmi-marker" id="bmi-marker"></div>
+                </div>
+                <div class="bmi-scale-labels">
+                    <span>15</span>
+                    <span>18.5</span>
+                    <span>25</span>
+                    <span>30</span>
+                    <span>40</span>
+                </div>
+                <p class="bmi-hint">ИМТ = вес (кг) ÷ рост (м)²</p>
+            </div>
+
+            <button class="btn-primary" id="btn-profile-save" onclick="saveProfile()">Сохранить</button>
+            <button class="btn-secondary hidden" id="btn-profile-cancel" onclick="closeProfile()">Отмена</button>
+        </div>
+    </div>
+
+    <!-- ========================= -->
+    <!-- ОСНОВНОЕ ПРИЛОЖЕНИЕ        -->
+    <!-- ========================= -->
+    <header class="app-header">
+        <h1>Дневник питания</h1>
+        <button class="profile-btn" onclick="openProfile()" title="Профиль">
+            <span id="header-name">Профиль</span> ⚙
+        </button>
+    </header>
+
+    <nav class="tab-bar">
+        <button class="tab-btn active" id="tab-new" onclick="switchTab('new')">Новая запись</button>
+        <button class="tab-btn" id="tab-diary" onclick="switchTab('diary')">Дневник</button>
+        <button class="tab-btn" id="tab-chart" onclick="switchTab('chart')">График</button>
+    </nav>
+
+    <!-- ========================= -->
+    <!-- ЭКРАН 1: НОВАЯ ЗАПИСЬ      -->
+    <!-- ========================= -->
+    <main id="screen-new" class="screen active">
+
+        <div class="progress-bar">
+            <div class="progress-fill" id="progress-fill"></div>
+        </div>
+        <p class="step-label" id="step-label">Шаг 1 из 6</p>
+
+        <div class="step" id="step-1">
+            <h2>Когда и что за приём пищи?</h2>
+            <label for="input-date">Дата</label>
+            <input type="date" id="input-date" class="field">
+
+            <label for="input-time">Время</label>
+            <input type="time" id="input-time" class="field">
+
+            <label for="input-meal-type">Тип приёма пищи</label>
+            <select id="input-meal-type" class="field">
+                <option value="">— выберите —</option>
+                <option value="Завтрак">Завтрак</option>
+                <option value="Обед">Обед</option>
+                <option value="Ужин">Ужин</option>
+                <option value="Перекус">Перекус</option>
+                <option value="Другое">Другое</option>
+            </select>
+        </div>
+
+        <div class="step hidden" id="step-2">
+            <h2>Что съели и сколько?</h2>
+            <p class="hint">Каждый продукт — на новой строке. Например: «омлет из 2 яиц», «цельнозерновой хлеб — 1 ломтик».</p>
+            <div class="voice-field">
+                <textarea id="input-food" class="field textarea" rows="5" placeholder="Нажмите 🎤 и говорите или введите текст"></textarea>
+                <button class="voice-btn" onclick="startVoice('input-food')" title="Голосовой ввод">🎤</button>
+            </div>
+        </div>
+
+        <div class="step hidden" id="step-3">
+            <h2>Вода и глюкометр</h2>
+
+            <label for="input-water">Что пили и сколько (мл)</label>
+            <div class="voice-field">
+                <input type="text" id="input-water" class="field" placeholder="Напр.: травяной чай 200 мл">
+                <button class="voice-btn" onclick="startVoice('input-water')" title="Голосовой ввод">🎤</button>
+            </div>
+
+            <label for="input-glucose">Уровень глюкозы (ммоль/л)</label>
+            <input type="number" id="input-glucose" class="field" placeholder="Напр.: 5.4" step="0.1">
+        </div>
+
+        <div class="step hidden" id="step-4">
+            <h2>Как вы себя чувствовали?</h2>
+
+            <label for="input-emotion">Эмоция или физическая активность</label>
+            <div class="voice-field">
+                <input type="text" id="input-emotion" class="field" placeholder="Напр.: усталость, прогулка">
+                <button class="voice-btn" onclick="startVoice('input-emotion')" title="Голосовой ввод">🎤</button>
+            </div>
+
+            <label for="input-situation">Ситуация — что вызвало эмоцию</label>
+            <div class="voice-field">
+                <input type="text" id="input-situation" class="field" placeholder="Напр.: предстоящая планёрка">
+                <button class="voice-btn" onclick="startVoice('input-situation')" title="Голосовой ввод">🎤</button>
+            </div>
+
+            <label for="input-symptoms">Симптомы</label>
+            <div class="voice-field">
+                <input type="text" id="input-symptoms" class="field" placeholder="Напр.: тошнота, изжога">
+                <button class="voice-btn" onclick="startVoice('input-symptoms')" title="Голосовой ввод">🎤</button>
+            </div>
+
+            <label for="input-meds">Принимаемые препараты</label>
+            <div class="voice-field">
+                <input type="text" id="input-meds" class="field" placeholder="Напр.: метформин 500 мг">
+                <button class="voice-btn" onclick="startVoice('input-meds')" title="Голосовой ввод">🎤</button>
+            </div>
+        </div>
+
+        <div class="step hidden" id="step-5">
+            <h2>Оцените голод и сытость</h2>
+
+            <p class="hint">1 — совсем не голоден / совсем не сыт, 10 — очень голоден / очень сыт</p>
+
+            <label>Чувство голода</label>
+            <div class="scale-buttons" id="scale-hunger"></div>
+
+            <label>Чувство сытости</label>
+            <div class="scale-buttons" id="scale-satiety"></div>
+        </div>
+
+        <div class="step hidden" id="step-6">
+            <h2>Проверьте запись</h2>
+            <div id="summary" class="summary"></div>
+        </div>
+
+        <div class="step-nav">
+            <button class="btn-secondary" id="btn-prev" onclick="prevStep()">Назад</button>
+            <button class="btn-primary" id="btn-next" onclick="nextStep()">Далее</button>
+            <button class="btn-primary hidden" id="btn-save" onclick="saveEntry()">Сохранить</button>
+        </div>
+    </main>
+
+    <!-- ========================= -->
+    <!-- ЭКРАН 2: ДНЕВНИК           -->
+    <!-- ========================= -->
+    <main id="screen-diary" class="screen">
+        <div class="diary-toolbar">
+            <h2>Ваши записи</h2>
+            <button class="btn-export" onclick="exportCSV()">Скачать CSV</button>
+        </div>
+        <div id="diary-list"></div>
+        <p class="empty-msg hidden" id="empty-msg">Записей пока нет. Создайте первую!</p>
+    </main>
+
+    <!-- ========================= -->
+    <!-- ЭКРАН 3: ГРАФИК ГЛЮКОЗЫ    -->
+    <!-- ========================= -->
+    <main id="screen-chart" class="screen">
+        <div class="diary-toolbar">
+            <h2>Уровень глюкозы</h2>
+        </div>
+
+        <div class="chart-legend">
+            <span class="legend-item">
+                <span class="legend-dot legend-normal"></span>
+                Норма: 3.3–5.5 ммоль/л
+            </span>
+            <span class="legend-item">
+                <span class="legend-dot legend-high"></span>
+                Выше нормы
+            </span>
+            <span class="legend-item">
+                <span class="legend-dot legend-low"></span>
+                Ниже нормы
+            </span>
+        </div>
+
+        <p class="hint" id="chart-empty" style="text-align:center; padding:40px 20px;">
+            Нет данных для графика. Запишите уровень глюкозы в новой записи — и точки появятся здесь.
+        </p>
+        <canvas id="glucose-chart"></canvas>
+    </main>
+
+    <!-- Основной скрипт приложения -->
+    <script src="app.js"></script>
+
+    <!-- Регистрация service worker (PWA) -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('./sw.js')
+                .then(() => console.log('Service Worker зарегистрирован'))
+                .catch(err => console.log('Ошибка SW:', err));
+        }
+    </script>
+</body>
+</html>
